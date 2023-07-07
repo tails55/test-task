@@ -3,7 +3,7 @@ package ru.deeplay.tails55.testtask;
 import java.util.*;
 
 public class Task2 {
-    static class Pair<F, S> {
+    private static class Pair<F, S> {
         private F first;
         private S second;
 
@@ -29,22 +29,22 @@ public class Task2 {
         }
     }
 
-    private static final int length = 20;
-    private static final int min = -5;
-    private static final int max = 5;
+    private static final int LENGTH = 20;
+    private static final int MIN = -5;
+    private static final int MAX = 5;
 
     public static void main(String[] args) {
         Random random = new Random();
-        int[] array = new int[length];
+        int[] array = new int[LENGTH];
         System.out.println("Random array pre sorting:");
-        for (int i = 0; i < length; i++) {
-            array[i] = random.nextInt(-min + max + 1) + min;
+        for (int i = 0; i < LENGTH; i++) {
+            array[i] = random.nextInt(-MIN + MAX + 1) + MIN;
             System.out.print(array[i] + " ");
         }
 
         //Считаем частоту упоминания каждого числа в массиве
         Map<Integer, Integer> frequencyMap = new HashMap<>();
-        for (int i = 0; i < length; i++)
+        for (int i = 0; i < LENGTH; i++)
             frequencyMap.put(array[i], frequencyMap.getOrDefault(array[i], 0) + 1);
         //Находим числа с максимальной частотой упоминания и эту самую частоту (можно было бы объединить с заполнением HashMap, но eh...)
         Pair<Integer, Set<Integer>> result = new Pair<>(0, new TreeSet<>());
