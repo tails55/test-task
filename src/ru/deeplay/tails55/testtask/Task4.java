@@ -54,7 +54,7 @@ public class Task4 {
 
         System.out.println("Введите число подгрупп K:");
         int k = scanner.nextInt();
-        if (k <= 1) {
+        if (k <= 0) {
             System.out.println("Число K должно быть не менее 1!");
             return;
         } else if(k>count+1) { //k=count+1 возможен, например, при разбиении [-1; 1] на 3 группы с суммами -1, 0 и 1
