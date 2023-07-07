@@ -5,6 +5,7 @@ import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+// Раз можно Монте-Карло, решу через Монте-Карло, заодно многопоточность попробую
 public class Task3 {
     private static ReadWriteLock readWriteLock = new ReentrantReadWriteLock();
     private static Set<MonteCarloThread> activeThreads = new HashSet<>();
@@ -18,6 +19,8 @@ public class Task3 {
     private static int dieSize;
     private static int sequenceSize;
 
+    // Один поток Монте-Карло, получает нужные для симуляции данные, симулирует свою долю матчей и потом
+    // 1 раз обновляет общие данные; если этот поток последний, он сообщит результаты и "выключит за собой свет"
     private static class MonteCarloThread extends Thread {
         private static int nextId = 0;
         private final int id;
@@ -42,14 +45,16 @@ public class Task3 {
 
         @Override
         public void run() {
+            // Симуляция очередного матча
             while (matchesLeft > 0) {
                 matchesLeft--;
                 List<Integer> diceQueue = new ArrayList<>();
                 long p1score = 0;
                 long p2score = 0;
+                // Сколько бросков ещё должно произойти, чтобы можно было получить очередное очко
                 int p1scoreCD = sequenceSize;
                 int p2scoreCD = sequenceSize;
-
+                // Симуляция i-го броска
                 for (int i = 0; i < gameLength; i++) {
                     p1scoreCD--;
                     p2scoreCD--;
@@ -57,7 +62,7 @@ public class Task3 {
                     diceQueue.add(random.nextInt(dieSize));
                     if (diceQueue.size() > sequenceSize)
                         diceQueue.remove(0);
-
+                    // Шанс получить очередное очко, если есть совпадение и мы не на "перезарядке"
                     if (p1scoreCD <= 0) {
                         boolean addScore = true;
                         for (int j = 0; j < sequenceSize && addScore; j++)
@@ -67,7 +72,6 @@ public class Task3 {
                             p1scoreCD = sequenceSize;
                         }
                     }
-
                     if (p2scoreCD <= 0) {
                         boolean addScore = true;
                         for (int j = 0; j < sequenceSize && addScore; j++)
@@ -78,7 +82,7 @@ public class Task3 {
                         }
                     }
                 }
-
+                // Исход матча
                 if (p1score == p2score)
                     draws++;
                 else if (p1score > p2score)
@@ -89,7 +93,7 @@ public class Task3 {
                 p1scores += p1score;
                 p2scores += p2score;
             }
-
+            // Обновляем общие данные и закрываем поток
             try {
                 readWriteLock.writeLock().lock();
                 totalP1wins += p1wins;
@@ -98,12 +102,13 @@ public class Task3 {
                 totalGames += p1wins + p2wins + draws;
                 totalP1scores += p1scores;
                 totalP2scores += p2scores;
-
                 activeThreads.remove(this);
+                // Кто последний, тот и отчитывается
                 if (activeThreads.isEmpty()) {
                     System.out.println("Вероятность победы игрока 1 ~= " + (100. * totalP1wins / totalGames) + "%;");
                     System.out.println("Вероятность победы игрока 2 ~= " + (100. * totalP2wins / totalGames) + "%;");
                     System.out.println("Вероятность ничьи ~= " + (100. * totalDraws / totalGames) + "%;");
+                    // По условию сначала подумал, что это тоже нужно, решил оставить
                     System.out.println("Средний результат игрока 1 ~= " + (1. * totalP1scores / totalGames) + " очков;");
                     System.out.println("Средний результат игрока 2 ~= " + (1. * totalP2scores / totalGames) + " очков;");
                 }
