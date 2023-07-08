@@ -103,65 +103,72 @@ public class Task3NonMonteCarlo {
         // Вход - вектор длиной 3, первая координата - счёт (разница между рез-ми 1го и 2го игроков), вторая и третья - текущие длины цепочек игроков 1 и 2;
         // Выход - вероятность такого вектора
         Map<List<Integer>, Double> results = new HashMap<>();
+        // Выход - средний результат первого игрока, помноженный на вероятность из results
+        Map<List<Integer>, Double> scores = new HashMap<>();
 
         results.put(List.of(0, 0, 0), 1.);
+        scores.put(List.of(0, 0, 0), 0.);
 
 
         for (int rollNumber = 1; rollNumber <= gameLength; rollNumber++) {
             Map<List<Integer>, Double> nextResults = new HashMap<>();
+            Map<List<Integer>, Double> nextScores = new HashMap<>();
 
-            // Инициируем следующий уровень
-            for (int i = -rollNumber; i <= rollNumber; i++) {
-                for (int j = 0; j < sequenceSize; j++) {
-                    for (int k = 0; k < sequenceSize; k++) {
-                        nextResults.put(List.of(i, j, k), 0.);
+            // Для всех возможных текущих счётов, состояний прогресса и результатов броска игральной кости обновляем соответствующую запись в nextResults
+            for (List<Integer> keys : results.keySet()) {
+                int i = keys.get(SCORE_DIFF);
+                int j = keys.get(P1SEQ_STEP);
+                int k = keys.get(P2SEQ_STEP);
+                double output = results.getOrDefault(List.of(i, j, k), 0.) / dieSize;
+                if (Double.compare(output, 0) <= 0)
+                    continue;
+                double score = scores.getOrDefault(List.of(i, j, k), 0.) / dieSize;
+                for (int d = 0; d < dieSize; d++) {
+                    double tempScore=score;
+                    List<Integer> input = new ArrayList<>(List.of(i, p1nextProgress[j][d], p2nextProgress[k][d]));
+                    if (input.get(P1SEQ_STEP) == sequenceSize) {
+                        input.set(P1SEQ_STEP, 0);
+                        input.set(SCORE_DIFF, input.get(SCORE_DIFF) + 1);
+                        tempScore += output;
                     }
-                }
-            }
-            // Для всех возможных текущих счётов, состояний прогресса и результатов броска игральной кости обновляем соответствующее поле таблицы
-            for (int i = 1 - rollNumber; i < rollNumber; i++) {
-                for (int j = 0; j < sequenceSize; j++) {
-                    for (int k = 0; k < sequenceSize; k++) {
-                        for (int d = 0; d < dieSize; d++) {
-                            List<Integer> input = new ArrayList<>(List.of(i, p1nextProgress[j][d], p2nextProgress[k][d]));
-                            double output = results.getOrDefault(List.of(i, j, k), 0.);
-                            if (Double.compare(output, 0) <= 0)
-                                continue;
-                            output /= dieSize;
-                            if (input.get(P1SEQ_STEP) == sequenceSize) {
-                                input.set(P1SEQ_STEP, 0);
-                                input.set(SCORE_DIFF, input.get(SCORE_DIFF) + 1);
-                            }
-                            if (input.get(P2SEQ_STEP) == sequenceSize) {
-                                input.set(P2SEQ_STEP, 0);
-                                input.set(SCORE_DIFF, input.get(SCORE_DIFF) - 1);
-                            }
-                            nextResults.put(input, nextResults.get(input) + output);
-                        }
+                    if (input.get(P2SEQ_STEP) == sequenceSize) {
+                        input.set(P2SEQ_STEP, 0);
+                        input.set(SCORE_DIFF, input.get(SCORE_DIFF) - 1);
                     }
+                    nextResults.put(input, nextResults.getOrDefault(input,0.) + output);
+                    nextScores.put(input, nextScores.getOrDefault(input,0.) + tempScore);
                 }
             }
             results = nextResults;
+            scores = nextScores;
         }
 
         // Опять же, знаю, что не обязательно, но раз уж могу эти данные тоже получить
         double p1winChance = 0.;
         double p2winChance = 0.;
+        double p1scores = 0.;
+        double p2scores = 0.;
 
         for (int i = -gameLength; i <= gameLength; i++) {
             for (int j = 0; j < sequenceSize; j++) {
                 for (int k = 0; k < sequenceSize; k++) {
-                    double output = results.get(List.of(i, j, k));
+                    double output = results.getOrDefault(List.of(i, j, k),0.);
+                    if(Double.compare(output,0)<=0)
+                        continue;
                     if (i > 0)
                         p1winChance += output;
                     else if (i < 0)
                         p2winChance += output;
+                    p1scores+=scores.getOrDefault(List.of(i,j,k),0.0);
+                    p2scores+=scores.getOrDefault(List.of(i,j,k),0.0)-output*i;
                 }
             }
         }
 
         System.out.println("Вероятность победы игрока 1 ~= " + (100. * p1winChance) + "%;");
         System.out.println("Вероятность победы игрока 2 ~= " + (100. * p2winChance) + "%;");
-        System.out.println("Вероятность ничьи ~= " + (100. * (1-p1winChance-p2winChance)) + "%;");
+        System.out.println("Вероятность ничьи ~= " + (100. * (1 - p1winChance - p2winChance)) + "%;");
+        System.out.println("Средний результат игрока 1 ~= " + (p1scores) + " очков;");
+        System.out.println("Средний результат игрока 2 ~= " + (p2scores) + " очков;");
     }
 }
