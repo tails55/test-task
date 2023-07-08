@@ -6,50 +6,9 @@ import java.util.*;
 // Значительно медленнее, но в плане точности ограничено только даблами (можно переписать на BigInteger,
 // чтобы не терять очень маленькие шансы вроде "33 очка из 100", но роли это не сыграет, а память съест)
 public class Task3NonMonteCarlo {
-    private static class Pair<T> {
-        private T first;
-        private T second;
-
-        public Pair(T first, T second) {
-            this.first = first;
-            this.second = second;
-        }
-
-        public T getFirst() {
-            return first;
-        }
-
-        public void setFirst(T first) {
-            this.first = first;
-        }
-
-        public T getSecond() {
-            return second;
-        }
-
-        public void setSecond(T second) {
-            this.second = second;
-        }
-
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            Pair<?> triplet = (Pair<?>) o;
-
-            if (!Objects.equals(first, triplet.first)) return false;
-            return Objects.equals(second, triplet.second);
-        }
-
-        @Override
-        public int hashCode() {
-            int result = first != null ? first.hashCode() : 0;
-            result = 31 * result + (second != null ? second.hashCode() : 0);
-            return result;
-        }
-    }
+    private static final int SCORE_DIFF = 0;
+    private static final int P1SEQ_STEP = 1;
+    private static final int P2SEQ_STEP = 2;
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -124,10 +83,10 @@ public class Task3NonMonteCarlo {
                 // Продолжение прогресса
                 if (p1target[i] == j)
                     p1nextProgress[i][j] = i + 1;
-                // Падаем назад, вопрос как далеко
+                    // Падаем назад, вопрос как далеко
                 else for (int k = i - 1; k >= 0; k--) {
                     //Можем упасть до k+1, если в k-й позиции j, а хвост до i-1 длиной k совпадает с головой с 0 той же длины
-                    if (p1target[k] == j && (k == 0 || p1subArrayEqualities[k - 1].get(i-1))) {
+                    if (p1target[k] == j && (k == 0 || p1subArrayEqualities[k - 1].get(i - 1))) {
                         p1nextProgress[i][j] = k + 1;
                     }
                 }
@@ -135,89 +94,74 @@ public class Task3NonMonteCarlo {
                 if (p2target[i] == j)
                     p2nextProgress[i][j] = i + 1;
                 else for (int k = i - 1; k >= 0; k--) {
-                    if (p2target[k] == j && (k == 0 || p2subArrayEqualities[k - 1].get(i-1))) {
+                    if (p2target[k] == j && (k == 0 || p2subArrayEqualities[k - 1].get(i - 1))) {
                         p2nextProgress[i][j] = k + 1;
                     }
                 }
             }
         }
+        // Вход - вектор длиной 3, первая координата - счёт (разница между рез-ми 1го и 2го игроков), вторая и третья - текущие длины цепочек игроков 1 и 2;
+        // Выход - вероятность такого вектора
+        Map<List<Integer>, Double> results = new HashMap<>();
 
-        Map<Pair<Integer>, Double> p1probabilities = new HashMap<>();
-        Map<Pair<Integer>, Double> p2probabilities = new HashMap<>();
+        results.put(List.of(0, 0, 0), 1.);
 
-        // Вероятность иметь 0 очков и 0 прогресса до 1 раунда равна 1
-        p1probabilities.put(new Pair<>(0, 0), 1.);
-        p2probabilities.put(new Pair<>(0, 0), 1.);
 
         for (int rollNumber = 1; rollNumber <= gameLength; rollNumber++) {
-            Map<Pair<Integer>, Double> nextp1probabilities = new HashMap<>();
-            Map<Pair<Integer>, Double> nextp2probabilities = new HashMap<>();
+            Map<List<Integer>, Double> nextResults = new HashMap<>();
 
             // Инициируем следующий уровень
-            for (int i = 0; i <= rollNumber; i++) {
+            for (int i = -rollNumber; i <= rollNumber; i++) {
                 for (int j = 0; j < sequenceSize; j++) {
-                    nextp1probabilities.put(new Pair<>(i, j), 0.);
-                    nextp2probabilities.put(new Pair<>(i, j), 0.);
-                }
-            }
-            // Для всех возможных текущих счётов, состояний прогресса и результатов броска игральной кости обновляем соответствующее поле таблицы
-            for (int i = 0; i < rollNumber; i++) {
-                for (int j = 0; j < sequenceSize; j++) {
-                    for (int d = 0; d < dieSize; d++) {
-                        Pair<Integer> p1triplet = new Pair<>(i, p1nextProgress[j][d]);
-                        if (p1triplet.getSecond() == sequenceSize) {
-                            p1triplet.setSecond(0);
-                            p1triplet.setFirst(p1triplet.getFirst() + 1);
-                        }
-                        nextp1probabilities.put(p1triplet, nextp1probabilities.get(p1triplet) + p1probabilities.getOrDefault(new Pair<>(i, j),0.) / dieSize);
-
-                        Pair<Integer> p2triplet = new Pair<>(i, p2nextProgress[j][d]);
-                        if (p2triplet.getSecond() == sequenceSize) {
-                            p2triplet.setSecond(0);
-                            p2triplet.setFirst(p2triplet.getFirst() + 1);
-                        }
-                        nextp2probabilities.put(p2triplet, nextp2probabilities.get(p2triplet) + p2probabilities.getOrDefault(new Pair<>(i, j),0.) / dieSize);
+                    for (int k = 0; k < sequenceSize; k++) {
+                        nextResults.put(List.of(i, j, k), 0.);
                     }
                 }
             }
-            // Заменяем старый уровень новым
-            p1probabilities=nextp1probabilities;
-            p2probabilities=nextp2probabilities;
+            // Для всех возможных текущих счётов, состояний прогресса и результатов броска игральной кости обновляем соответствующее поле таблицы
+            for (int i = 1 - rollNumber; i < rollNumber; i++) {
+                for (int j = 0; j < sequenceSize; j++) {
+                    for (int k = 0; k < sequenceSize; k++) {
+                        for (int d = 0; d < dieSize; d++) {
+                            List<Integer> input = new ArrayList<>(List.of(i, p1nextProgress[j][d], p2nextProgress[k][d]));
+                            double output = results.getOrDefault(List.of(i, j, k), 0.);
+                            if (Double.compare(output, 0) <= 0)
+                                continue;
+                            output /= dieSize;
+                            if (input.get(P1SEQ_STEP) == sequenceSize) {
+                                input.set(P1SEQ_STEP, 0);
+                                input.set(SCORE_DIFF, input.get(SCORE_DIFF) + 1);
+                            }
+                            if (input.get(P2SEQ_STEP) == sequenceSize) {
+                                input.set(P2SEQ_STEP, 0);
+                                input.set(SCORE_DIFF, input.get(SCORE_DIFF) - 1);
+                            }
+                            nextResults.put(input, nextResults.get(input) + output);
+                        }
+                    }
+                }
+            }
+            results = nextResults;
         }
 
-        double[] p1resultProbabilities=new double[gameLength+1];
-        double[] p2resultProbabilities=new double[gameLength+1];
         // Опять же, знаю, что не обязательно, но раз уж могу эти данные тоже получить
-        double p1score=0.;
-        double p2score=0.;
-        double p1winChance=0.;
-        double p2winChance=0.;
-        double drawChance=0.;
+        double p1winChance = 0.;
+        double p2winChance = 0.;
 
-        for(int i=0;i<=gameLength;i++) {
-            for(int j=0;j<sequenceSize;j++) {
-                p1resultProbabilities[i]+=p1probabilities.getOrDefault(new Pair<>(i,j),0.);
-                p2resultProbabilities[i]+=p2probabilities.getOrDefault(new Pair<>(i,j),0.);
+        for (int i = -gameLength; i <= gameLength; i++) {
+            for (int j = 0; j < sequenceSize; j++) {
+                for (int k = 0; k < sequenceSize; k++) {
+                    double output = results.get(List.of(i, j, k));
+                    if (i > 0)
+                        p1winChance += output;
+                    else if (i < 0)
+                        p2winChance += output;
+                }
             }
-            p1score+=i*p1resultProbabilities[i];
-            p2score+=i*p2resultProbabilities[i];
         }
-
-        for(int i=0;i<=gameLength;i++)
-            for(int j=0;j<=gameLength;j++) {
-                if(i<j)
-                    p2winChance+=p1resultProbabilities[i]*p2resultProbabilities[j];
-                if(i>j)
-                    p1winChance+=p1resultProbabilities[i]*p2resultProbabilities[j];
-                if(i==j)
-                    drawChance+=p1resultProbabilities[i]*p2resultProbabilities[j];
-            }
-
 
         System.out.println("Вероятность победы игрока 1 ~= " + (100. * p1winChance) + "%;");
         System.out.println("Вероятность победы игрока 2 ~= " + (100. * p2winChance) + "%;");
-        System.out.println("Вероятность ничьи ~= " + (100. * drawChance) + "%;");
-        System.out.println("Средний результат игрока 1 ~= " + (p1score) + " очков;");
-        System.out.println("Средний результат игрока 2 ~= " + (p2score) + " очков;");
+        System.out.println("Вероятность ничьи ~= " + (100. * (1-p1winChance-p2winChance)) + "%;");
     }
 }
