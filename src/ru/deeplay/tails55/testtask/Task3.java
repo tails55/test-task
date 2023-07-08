@@ -19,7 +19,7 @@ public class Task3 {
     private static int dieSize;
     private static int sequenceSize;
 
-    // Один поток Монте-Карло, получает нужные для симуляции данные, симулирует свою долю матчей и потом
+    // Один поток симуляции Монте-Карло, получает нужные для симуляции данные, симулирует свою долю матчей и потом
     // 1 раз обновляет общие данные; если этот поток последний, он сообщит результаты и "выключит за собой свет"
     private static class MonteCarloThread extends Thread {
         private static int nextId = 0;
